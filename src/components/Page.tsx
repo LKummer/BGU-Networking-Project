@@ -3,13 +3,22 @@ import { Simulation } from "./Simulation";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
+import AppBar from "@mui/material/AppBar";
+import Toolbar from "@mui/material/Toolbar";
 
 interface Props {}
 
 export const Page: FunctionComponent<Props> = ({}) => {
   return (
     <Fragment>
-      <Card sx={{ mb: 2 }}>
+      <AppBar>
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            BGU Networking Course Final Project
+          </Typography>
+        </Toolbar>
+      </AppBar>
+      <Card sx={{ mb: 2, mt: 12 }}>
         <CardContent>
           <Typography variant="h4">HHH Explanation</Typography>
           <Typography variant="body1" sx={{ mt: 2, mb: 2 }}>

@@ -69,6 +69,18 @@ export const Simulation: FunctionComponent<Props> = ({}) => {
     setChartData(await runSimulation(threshold, legitimateSize, attackSize));
   };
 
+  const runHighSuccessRateExample = async () => {
+    setChartData(await runSimulation(0.1, 20000, 10000));
+  };
+
+  const runHighLegitimateBlockExample = async () => {
+    setChartData(await runSimulation(0.1, 20000, 2500));
+  };
+
+  const runSuccessfulButBlockingLegitimateExample = async () => {
+    setChartData(await runSimulation(0.1, 20000, 3000));
+  };
+
   return (
     <Card>
       <CardContent>
@@ -159,6 +171,35 @@ export const Simulation: FunctionComponent<Props> = ({}) => {
           ]}
           height={300}
         />
+        <Typography variant="h4">Examples</Typography>
+        <Typography variant="body1" sx={{ mt: 2, mb: 2 }}>
+          Example showing high attack blogk rate with little to no legitimate
+          traffic blocking. With 0.1 threshold, 20,000 legitimate requests and
+          10,000 attack requests.
+        </Typography>
+        <Button variant="contained" onClick={runHighSuccessRateExample}>
+          High success rate example
+        </Button>
+        <Typography variant="body1" sx={{ mt: 2, mb: 2 }}>
+          Example showing high legitimate request block rate when the rate of
+          attack requests is too low compared to the threshold. With 0.1
+          threshold, 20,000 legitimate requests and 2,500 attack requests.
+        </Typography>
+        <Button variant="contained" onClick={runHighLegitimateBlockExample}>
+          High legitimate block rate example
+        </Button>
+        <Typography variant="body1" sx={{ mt: 2, mb: 2 }}>
+          Example showing mediocre blocking of an attack but also blocking of a
+          lot of legitimate traffic when the rate of attack is close to the
+          threshold. With 0.1 threshold, 20,000 legitimate requests and 3,500
+          attack requests.
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={runSuccessfulButBlockingLegitimateExample}
+        >
+          Mediocre blocking but also blocking legitimate traffic example
+        </Button>
       </CardContent>
     </Card>
   );
@@ -200,35 +241,40 @@ async function runSimulation(
         dnsServer.attackRequestsBlockedData[i] / attackRequests,
     )
     .map((v) => (isNaN(v) ? 0 : v))
-    .filter((_, i) => i % 1000 === 0);
+    .filter((_, i) => i % 1000 === 0)
+    .map((v) => v * 100);
   const totalBlockRate = dnsServer.totalRequestsData
     .map(
       (totalRequests, i) =>
         dnsServer.totalRequestsBlockedData[i] / totalRequests,
     )
     .map((v) => (isNaN(v) ? 0 : v))
-    .filter((_, i) => i % 1000 === 0);
+    .filter((_, i) => i % 1000 === 0)
+    .map((v) => v * 100);
   const timeSaveRate = dnsServer.totalCPUTimeSavedData
     .map(
       (totalCPUTimeSaved, i) =>
         totalCPUTimeSaved / dnsServer.totalCPUTimeData[i],
     )
     .map((v) => (isNaN(v) ? 0 : v))
-    .filter((_, i) => i % 1000 === 0);
+    .filter((_, i) => i % 1000 === 0)
+    .map((v) => v * 100);
   const legitimateRateFromBlocked = dnsServer.legitimateRequestsBlockedData
     .map(
       (legitimateRequestsBlocked, i) =>
         legitimateRequestsBlocked / dnsServer.totalRequestsBlockedData[i],
     )
     .map((v) => (isNaN(v) ? 0 : v))
-    .filter((_, i) => i % 1000 === 0);
+    .filter((_, i) => i % 1000 === 0)
+    .map((v) => v * 100);
   const attackRateFromBlocked = dnsServer.attackRequestsBlockedData
     .map(
       (attackRequestsBlocked, i) =>
         attackRequestsBlocked / dnsServer.totalRequestsBlockedData[i],
     )
     .map((v) => (isNaN(v) ? 0 : v))
-    .filter((_, i) => i % 1000 === 0);
+    .filter((_, i) => i % 1000 === 0)
+    .map((v) => v * 100);
   return {
     attackBlockRate,
     totalBlockRate,
