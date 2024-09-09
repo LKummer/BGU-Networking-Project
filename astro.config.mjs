@@ -5,5 +5,7 @@ import react from '@astrojs/react';
 
 // https://astro.build/config
 export default defineConfig({
-  integrations: [react()]
+  integrations: [react()],
+  site: "https://lkummer.github.io",
+  base: "BGU-Networking-Project"
 });
