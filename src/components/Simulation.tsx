@@ -8,6 +8,7 @@ import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
+import Slider from "@mui/material/Slider";
 import Alert from "@mui/material/Alert";
 import { LineChart } from "@mui/x-charts/LineChart";
 
@@ -25,6 +26,9 @@ export const Simulation: FunctionComponent<Props> = ({}) => {
   const [threshold, setThreshold] = useState(0.1);
   const [thresholdValid, setThresholdValid] = useState(true);
 
+  const [legitimateSize, setLegitimateSize] = useState(50000);
+  const [attackSize, setAttackSize] = useState(25000);
+
   const [chartData, setChartData] = useState<ChartData>({
     attackBlockRate: [],
     totalBlockRate: [],
@@ -32,6 +36,18 @@ export const Simulation: FunctionComponent<Props> = ({}) => {
     legitimateRateFromBlocked: [],
     attackRateFromBlocked: [],
   });
+
+  const handleLegitimateSizeChange = (_: any, value: number | number[]) => {
+    if (typeof value === "number") {
+      setLegitimateSize(value);
+    }
+  };
+
+  const handleAttackSizeChange = (_: any, value: number | number[]) => {
+    if (typeof value === "number") {
+      setAttackSize(value);
+    }
+  };
 
   const handleThreholdValidation: ChangeEventHandler<HTMLInputElement> = (
     e,
@@ -50,7 +66,7 @@ export const Simulation: FunctionComponent<Props> = ({}) => {
   };
 
   const handleSimulation = async () => {
-    setChartData(await runSimulation(threshold));
+    setChartData(await runSimulation(threshold, legitimateSize, attackSize));
   };
 
   return (
@@ -59,8 +75,8 @@ export const Simulation: FunctionComponent<Props> = ({}) => {
         <Typography variant="h4">Simulation</Typography>
         <Typography variant="body1" sx={{ mt: 2, mb: 2 }}>
           In this form you can modify simulation parameters and run a simulation
-          of RHHH based evolutionary DNS server protection algorithm over
-          approximately 150,000 requests.
+          of RHHH based evolutionary DNS server protection algorithm over up to
+          210,000 requests.
         </Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
           Simulation results are displayed below the form. The charts' X axis is
@@ -72,6 +88,26 @@ export const Simulation: FunctionComponent<Props> = ({}) => {
           running the simulation. It will become responsive after the simulation
           is done running.
         </Alert>
+        <Typography id="input-slider" gutterBottom>
+          Legitimate requests count
+        </Typography>
+        <Slider
+          defaultValue={50000}
+          min={5000}
+          max={110000}
+          valueLabelDisplay="auto"
+          onChange={handleLegitimateSizeChange}
+        />
+        <Typography id="input-slider" gutterBottom>
+          Attack requests count
+        </Typography>
+        <Slider
+          defaultValue={25000}
+          min={1000}
+          max={100000}
+          valueLabelDisplay="auto"
+          onChange={handleAttackSizeChange}
+        />
         <TextField
           label="Threshold"
           defaultValue="0.1"
@@ -128,10 +164,35 @@ export const Simulation: FunctionComponent<Props> = ({}) => {
   );
 };
 
-async function runSimulation(thresold: number): Promise<ChartData> {
+async function runSimulation(
+  thresold: number,
+  legitimateCount: number,
+  attackCount: number,
+): Promise<ChartData> {
+  const legitimateData = (await import("../content/legitimateTrace.json"))
+    .default as DNSRequest[];
+  const attackData = (await import("../content/attackTrace.json"))
+    .default as DNSRequest[];
+
+  const legitimateDataSliced = legitimateData.slice(0, legitimateCount);
+  const lastLegitimateArrival =
+    legitimateDataSliced[legitimateDataSliced.length - 1].arrivedAtMS;
+
+  const attackDataSliced = attackData.slice(0, attackCount);
+  const lastAttackArrival =
+    attackDataSliced[attackDataSliced.length - 1].arrivedAtMS;
+
+  const attackDataWithTimesNormalized = attackDataSliced.map((e) => ({
+    ...e,
+    arrivedAtMS: (e.arrivedAtMS * lastLegitimateArrival) / lastAttackArrival,
+  }));
+  const combinedData = legitimateDataSliced.concat(
+    attackDataWithTimesNormalized,
+  );
+  combinedData.sort((a, b) => a.arrivedAtMS - b.arrivedAtMS);
+
   const dnsServer = new DNSServerSimulator(thresold);
-  const data = await import("../content/trace.json");
-  dnsServer.handleRequests(data.default as DNSRequest[]);
+  dnsServer.handleRequests(combinedData);
 
   const attackBlockRate = dnsServer.attackRequestsData
     .map(
