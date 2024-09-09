@@ -8,6 +8,7 @@ import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
+import Alert from "@mui/material/Alert";
 import { LineChart } from "@mui/x-charts/LineChart";
 
 interface Props {}
@@ -21,7 +22,7 @@ interface ChartData {
 }
 
 export const Simulation: FunctionComponent<Props> = ({}) => {
-  const [threshold, setThreshold] = useState(0.05);
+  const [threshold, setThreshold] = useState(0.1);
   const [thresholdValid, setThresholdValid] = useState(true);
 
   const [chartData, setChartData] = useState<ChartData>({
@@ -55,11 +56,25 @@ export const Simulation: FunctionComponent<Props> = ({}) => {
   return (
     <Card>
       <CardContent>
-        <Typography variant="h4">RHHH Simulation</Typography>
-        <Typography variant="body1">TODO explanation</Typography>
+        <Typography variant="h4">Simulation</Typography>
+        <Typography variant="body1" sx={{ mt: 2, mb: 2 }}>
+          In this form you can modify simulation parameters and run a simulation
+          of RHHH based evolutionary DNS server protection algorithm over
+          approximately 150,000 requests.
+        </Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
+          Simulation results are displayed below the form. The charts' X axis is
+          in thousands of requests. Run the simulation to display data, there is
+          no data to display initially before running a simulation.
+        </Typography>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Clicking "Run Simulation" may make the browser tab unresponsive while
+          running the simulation. It will become responsive after the simulation
+          is done running.
+        </Alert>
         <TextField
           label="Threshold"
-          defaultValue="0.05"
+          defaultValue="0.1"
           fullWidth
           margin="normal"
           onChange={handleThreholdValidation}
@@ -69,6 +84,7 @@ export const Simulation: FunctionComponent<Props> = ({}) => {
           variant="contained"
           disabled={!thresholdValid}
           onClick={handleSimulation}
+          sx={{ mt: 2 }}
         >
           Run Simulation
         </Button>

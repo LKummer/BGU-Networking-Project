@@ -2,11 +2,12 @@
 import Layout from '../layouts/Layout.astro';
 import Card from '../components/Card.astro';
 import {Simulation} from '../components/Simulation';
+import {Page} from "../components/Page";
 ---
 
 <Layout title="Welcome to Astro.">
 	<main>
-		<Simulation client:only />
+		<Page client:only />
 	</main>
 </Layout>
 
