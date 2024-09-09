@@ -1,20 +1,165 @@
-import { type FunctionalComponent } from "react";
+import {
+  useState,
+  type ChangeEventHandler,
+  type FunctionComponent,
+} from "react";
 import Button from "@mui/material/Button";
-import data from "../content/trace.json";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import { LineChart } from "@mui/x-charts/LineChart";
 
 interface Props {}
 
-export const Simulation: FunctionalComponent<Props> = ({}) => {
-  const dnsServer = new DNSServerSimulator(0.05);
-  dnsServer.handleRequests(data);
-  console.log(dnsServer);
+interface ChartData {
+  attackBlockRate: number[];
+  totalBlockRate: number[];
+  timeSaveRate: number[];
+  legitimateRateFromBlocked: number[];
+  attackRateFromBlocked: number[];
+}
+
+export const Simulation: FunctionComponent<Props> = ({}) => {
+  const [threshold, setThreshold] = useState(0.05);
+  const [thresholdValid, setThresholdValid] = useState(true);
+
+  const [chartData, setChartData] = useState<ChartData>({
+    attackBlockRate: [],
+    totalBlockRate: [],
+    timeSaveRate: [],
+    legitimateRateFromBlocked: [],
+    attackRateFromBlocked: [],
+  });
+
+  const handleThreholdValidation: ChangeEventHandler<HTMLInputElement> = (
+    e,
+  ) => {
+    if (!/\d+\.\d+/.test(e.target.value)) {
+      setThresholdValid(false);
+      return;
+    }
+    const value = parseFloat(e.target.value);
+    if (isNaN(value)) {
+      setThresholdValid(false);
+      return;
+    }
+    setThresholdValid(true);
+    setThreshold(value);
+  };
+
+  const handleSimulation = async () => {
+    setChartData(await runSimulation(threshold));
+  };
 
   return (
-    <div>
-      <Button>Simulate</Button>
-    </div>
+    <Card>
+      <CardContent>
+        <Typography variant="h4">RHHH Simulation</Typography>
+        <Typography variant="body1">TODO explanation</Typography>
+        <TextField
+          label="Threshold"
+          defaultValue="0.05"
+          fullWidth
+          margin="normal"
+          onChange={handleThreholdValidation}
+          error={!thresholdValid}
+        />
+        <Button
+          variant="contained"
+          disabled={!thresholdValid}
+          onClick={handleSimulation}
+        >
+          Run Simulation
+        </Button>
+        <LineChart
+          series={[
+            {
+              data: chartData.attackBlockRate,
+              label: "% of attack requests blocked",
+            },
+          ]}
+          height={300}
+        />
+        <LineChart
+          series={[
+            {
+              data: chartData.totalBlockRate,
+              label: "% blocked requests",
+            },
+            {
+              data: chartData.timeSaveRate,
+              label: "% CPU time saved",
+            },
+          ]}
+          height={300}
+        />
+        <LineChart
+          series={[
+            {
+              data: chartData.attackRateFromBlocked,
+              label: "% attack from blocked requests",
+            },
+            {
+              data: chartData.legitimateRateFromBlocked,
+              label: "% legitimate from blocked requests",
+            },
+          ]}
+          height={300}
+        />
+      </CardContent>
+    </Card>
   );
 };
+
+async function runSimulation(thresold: number): Promise<ChartData> {
+  const dnsServer = new DNSServerSimulator(thresold);
+  const data = await import("../content/trace.json");
+  dnsServer.handleRequests(data.default as DNSRequest[]);
+
+  const attackBlockRate = dnsServer.attackRequestsData
+    .map(
+      (attackRequests, i) =>
+        dnsServer.attackRequestsBlockedData[i] / attackRequests,
+    )
+    .map((v) => (isNaN(v) ? 0 : v))
+    .filter((_, i) => i % 1000 === 0);
+  const totalBlockRate = dnsServer.totalRequestsData
+    .map(
+      (totalRequests, i) =>
+        dnsServer.totalRequestsBlockedData[i] / totalRequests,
+    )
+    .map((v) => (isNaN(v) ? 0 : v))
+    .filter((_, i) => i % 1000 === 0);
+  const timeSaveRate = dnsServer.totalCPUTimeSavedData
+    .map(
+      (totalCPUTimeSaved, i) =>
+        totalCPUTimeSaved / dnsServer.totalCPUTimeData[i],
+    )
+    .map((v) => (isNaN(v) ? 0 : v))
+    .filter((_, i) => i % 1000 === 0);
+  const legitimateRateFromBlocked = dnsServer.legitimateRequestsBlockedData
+    .map(
+      (legitimateRequestsBlocked, i) =>
+        legitimateRequestsBlocked / dnsServer.totalRequestsBlockedData[i],
+    )
+    .map((v) => (isNaN(v) ? 0 : v))
+    .filter((_, i) => i % 1000 === 0);
+  const attackRateFromBlocked = dnsServer.attackRequestsBlockedData
+    .map(
+      (attackRequestsBlocked, i) =>
+        attackRequestsBlocked / dnsServer.totalRequestsBlockedData[i],
+    )
+    .map((v) => (isNaN(v) ? 0 : v))
+    .filter((_, i) => i % 1000 === 0);
+  return {
+    attackBlockRate,
+    totalBlockRate,
+    timeSaveRate,
+    legitimateRateFromBlocked,
+    attackRateFromBlocked,
+  };
+}
 
 interface DNSRequest {
   arrivedAtMS: number;
@@ -31,6 +176,7 @@ class DNSServerSimulator {
   threshold: number;
 
   totalRequests: number;
+  attackRequests: number;
   totalRequestsBlocked: number;
   attackRequestsBlocked: number;
   legitimateRequestsBlocked: number;
@@ -39,6 +185,7 @@ class DNSServerSimulator {
   totalCPUTimeSaved: number;
 
   totalRequestsData: number[];
+  attackRequestsData: number[];
   totalRequestsBlockedData: number[];
   attackRequestsBlockedData: number[];
   legitimateRequestsBlockedData: number[];
@@ -53,6 +200,7 @@ class DNSServerSimulator {
     this.threshold = rhhhThreshold;
 
     this.totalRequests = 0;
+    this.attackRequests = 0;
     this.totalRequestsBlocked = 0;
     this.attackRequestsBlocked = 0;
     this.legitimateRequestsBlocked = 0;
@@ -61,6 +209,7 @@ class DNSServerSimulator {
     this.totalCPUTimeSaved = 0;
 
     this.totalRequestsData = [];
+    this.attackRequestsData = [];
     this.totalRequestsBlockedData = [];
     this.attackRequestsBlockedData = [];
     this.legitimateRequestsBlockedData = [];
@@ -71,6 +220,7 @@ class DNSServerSimulator {
 
   private pushCountersToData() {
     this.totalRequestsData.push(this.totalRequests);
+    this.attackRequestsData.push(this.attackRequests);
     this.totalRequestsBlockedData.push(this.totalRequestsBlocked);
     this.attackRequestsBlockedData.push(this.attackRequestsBlocked);
     this.legitimateRequestsBlockedData.push(this.legitimateRequestsBlocked);
@@ -84,19 +234,10 @@ class DNSServerSimulator {
       sourceIP: request.sourceIP,
     });
 
-    // TODO Use the value from RHHH to protect the server somehow.
-    // Calculate the time saved by blocking requests?
-    // Change the algorithm to look up all hitters from subnets?
-    //
-    // Exported values:
-    // - % requests blocked
-    // - % attack requests blocked
-    // - % legitimate requests blocked
-    // - time saved by blocking
-    //
-    // Should export a data point for each reques processed and generate a time graph?
-
     this.totalRequests++;
+    if (request.isAttack) {
+      this.attackRequests++;
+    }
 
     if (!request.isCached) {
       const randomPrefix = request.sourceIP
